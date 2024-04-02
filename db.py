@@ -22,9 +22,9 @@ engine = create_engine("sqlite:///database/main.db", echo=False)
 Base.metadata.create_all(engine)
 
 # inserts a user to the database
-def insert_user(username: str, password: str):
+def insert_user(username: str, password: str, public_key: str):
     with Session(engine) as session:
-        user = User(username=username, password=password)
+        user = User(username=username, password=password, pubKey=public_key)
         session.add(user)
         session.commit()
 

@@ -86,3 +86,13 @@ def leave(username, room_id):
     emit("incoming", (f"{username} has left the room.", "red"), to=room_id)
     leave_room(room_id)
     room.leave_room(username)
+
+# Below are new functions
+
+@socketio.on('get_public_key')
+def handle_get_public_key(username):
+    user = db.get_user(username)
+    if user:
+        emit('public_key_response', {'public_key': user.pubKey})
+    else:
+        emit('public_key_response', {'error': 'User not found'})

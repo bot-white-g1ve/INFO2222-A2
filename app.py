@@ -4,10 +4,16 @@ this is where you'll find all of the get/post request handlers
 the socket event handlers are inside of socket_routes.py
 '''
 
-from flask import Flask, render_template, request, abort, url_for
+from flask import Flask, render_template, request, abort, url_for, jsonify
 from flask_socketio import SocketIO
 import db
 import secrets
+import os
+from cryptography.hazmat.backends import default_backend
+from cryptography.hazmat.primitives.asymmetric import rsa
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.asymmetric import padding
+from cryptography.hazmat.primitives import hashes
 
 # import logging
 
@@ -66,7 +72,31 @@ def signup_user():
     password = request.json.get("password")
 
     if db.get_user(username) is None:
-        db.insert_user(username, password)
+        private_key = rsa.generate_private_key(
+            public_exponent=65537,
+            key_size=2048,
+            backend=default_backend()
+        )
+        public_key = private_key.public_key()
+
+        public_key_serialized = public_key.public_bytes(
+            encoding=serialization.Encoding.PEM,
+            format=serialization.PublicFormat.SubjectPublicKeyInfo
+        )
+        private_key_serialized = private_key.private_bytes(
+            encoding=serialization.Encoding.PEM,
+            format=serialization.PrivateFormat.PKCS8,
+            encryption_algorithm=serialization.NoEncryption()
+        )
+
+        user_dir = f"local/{username}"
+        os.makedirs(user_dir, exist_ok=True)
+        with open(f"{user_dir}/public_key.pem", "wb") as pub_file:
+            pub_file.write(public_key_serialized)
+        with open(f"{user_dir}/private_key.pem", "wb") as priv_file:
+            priv_file.write(private_key_serialized)
+
+        db.insert_user(username, password, public_key_serialized.decode())
         return url_for('home', username=username)
     return "Error: User already exists!"
 
@@ -82,7 +112,7 @@ def home():
         abort(404)
     return render_template("home.jinja", username=request.args.get("username"))
 
-
+# Below are new functions
 
 if __name__ == '__main__':
     socketio.run(app)

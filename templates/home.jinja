@@ -106,14 +106,69 @@
     // an incoming message arrives, we'll add the message to the message box
     socket.on("incoming", (msg, color="black") => {
         add_message(msg, color);
-    })
+    });
     
     // we'll send the message to the server by emitting a "send" event
     function send() {
+        console.log("send called"); //d
         let message = $("#message").val();
         $("#message").val("");
-        socket.emit("send", username, message, room_id);  
+        let receiver = $("#receiver").val();
+        requestPublicKeyAndSend(username, receiver, message, room_id); 
     } 
+
+    function requestPublicKeyAndSend(username, receiver, message, room_id) {
+        console.log("requestPublicKeyAndSend called with:", {username, receiver, message, room_id}); //d
+
+        socket.emit('get_public_key', receiver);
+
+        socket.once('public_key_response', function(data) {
+            console.log("Public key response received:", data); //d
+
+            if (data.error) {
+                console.error("Error getting public key:", data.error);
+                return;
+            }
+
+            encryptAndSend(username, message, data.public_key, room_id);
+        });
+    }
+
+    async function encryptAndSend(username, message, publicKeyStr, room_id) {
+        const publicKey = await window.crypto.subtle.importKey(
+            "spki",
+            str2ab(atob(publicKeyStr)),
+            {
+                name: "RSA-OAEP",
+                hash: {name: "SHA-256"},
+            },
+            true,
+            ["encrypt"]
+        );
+
+        const encrypted = await window.crypto.subtle.encrypt(
+            {
+                name: "RSA-OAEP",
+            },
+            publicKey,
+            new TextEncoder().encode(message)
+        );
+
+        const encryptedMessage = arrayBufferToBase64(encrypted);
+
+        socket.emit("send", username, encryptedMessage, room_id);
+    }
+
+    // Base64 to ArrayBuffer
+    function str2ab(str) {
+        var binaryString = window.atob(str);
+        var len = binaryString.length;
+        var bytes = new Uint8Array(len);
+        for (var i = 0; i < len; i++) {
+            bytes[i] = binaryString.charCodeAt(i);
+        }
+        return bytes.buffer;
+    }
 
     // we emit a join room event to the server to join a room
     function join_room() {
