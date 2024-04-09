@@ -17,12 +17,14 @@ from models import Room
 import db
 
 room = Room()
-
+online_users = set()
 # when the client connects to a socket
 # this event is emitted when the io() function is called in JS
 @socketio.on('connect')
 def connect():
     username = request.cookies.get("username")
+    if username:
+        online_users.add(username)
     room_id = request.cookies.get("room_id")
     if room_id is None or username is None:
         return
@@ -36,6 +38,8 @@ def connect():
 @socketio.on('disconnect')
 def disconnect():
     username = request.cookies.get("username")
+    if username:
+        online_users.remove(username)
     room_id = request.cookies.get("room_id")
     if room_id is None or username is None:
         return
@@ -44,6 +48,10 @@ def disconnect():
 # send message event handler
 @socketio.on("send")
 def send(username, message, signature, room_id):
+    receiver = room.get_receiver_name(room_id, username)  
+    if receiver not in online_users:
+        emit("incoming", ("system", "The receiver is off-line", "red", False))
+        return
     emit("incoming", (username, message, "black", True, signature), to=room_id)
     
 # join room event handler
@@ -60,7 +68,7 @@ def join(sender_name, receiver_name):
         return "Unknown sender!"
     
     friends = db.get_all_friends_of_current_user(sender_name)
-    if receiver not in friends:
+    if receiver_name not in friends:
         return "Not a friend!"
         
 

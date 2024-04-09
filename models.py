@@ -13,7 +13,7 @@ or use SQLite, if you're not into fancy ORMs (but be mindful of Injection attack
 from sqlalchemy import String,Column,Integer
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 from sqlalchemy.ext.declarative import declarative_base
-from typing import Dict
+from typing import Dict, Set
 
 
 
@@ -58,24 +58,44 @@ class Room():
         # for example self.dict["John"] -> gives you the room id of 
         # the room where John is in
         self.dict: Dict[str, int] = {}
+        self.room_to_users: Dict[int, Set[str]] = {}
 
     def create_room(self, sender: str, receiver: str) -> int:
         room_id = self.counter.get()
         self.dict[sender] = room_id
         self.dict[receiver] = room_id
+        if room_id in self.room_to_users:
+            self.room_to_users[room_id].update([sender, receiver])
+        else:
+            self.room_to_users[room_id] = {sender, receiver}
         return room_id
     
     def join_room(self,  sender: str, room_id: int) -> int:
         self.dict[sender] = room_id
+        if room_id in self.room_to_users:
+            self.room_to_users[room_id].add(sender)
+        else:
+            self.room_to_users[room_id] = {sender}
+
 
     def leave_room(self, user):
+        room_id = self.dict[user]
         if user not in self.dict.keys():
             return
         del self.dict[user]
+        self.room_to_users[room_id].remove(user)
 
-    # gets the room id from a user
+    # gets the room id from a user1
     def get_room_id(self, user: str):
         if user not in self.dict.keys():
             return None
         return self.dict[user]
+    
+    def get_receiver_name(self, room_id: int, username: str):
+        users_in_room = self.room_to_users.get(room_id)
+        if users_in_room:
+            for user in users_in_room:
+                if user != username:
+                    return user
+        return None
     
