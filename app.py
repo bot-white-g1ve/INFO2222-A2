@@ -103,14 +103,14 @@ def home():
     if request.args.get("username") is None:
         abort(404)
 
-    username = request.args.get("username")
+    username = session.get("username")
     #FIXME 设置session,记录当前登录用户信息
     session['current_user'] = username
     session.permanent = True
     # FIXME 找到当前用户所有的朋友， 并交给模板宣染
     friends = db.get_all_friends_of_current_user(username)
     requests = db.get_all_request(username)
-    return render_template("home.jinja", username=request.args.get("username"), friends=friends, requests = requests)
+    return render_template("home.jinja", username=session.get("username"), friends=friends, requests = requests)
 
 
 @app.route("/add_friend")
