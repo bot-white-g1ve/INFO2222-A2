@@ -29,7 +29,7 @@ def connect():
     # socket automatically leaves a room on client disconnect
     # so on client connect, the room needs to be rejoined
     join_room(int(room_id))
-    emit("incoming", (f"{username} has connected", "green"), to=int(room_id))
+    emit("incoming", ("system", f"{username} has connected", "green", False), to=int(room_id))
 
 # event when client disconnects
 # quite unreliable use sparingly
@@ -39,12 +39,12 @@ def disconnect():
     room_id = request.cookies.get("room_id")
     if room_id is None or username is None:
         return
-    emit("incoming", (f"{username} has disconnected", "red"), to=int(room_id))
+    emit("incoming", ("system", f"{username} has disconnected", "red", False), to=int(room_id))
 
 # send message event handler
 @socketio.on("send")
-def send(username, message, room_id):
-    emit("incoming", (f"{username}: {message}"), to=room_id)
+def send(username, message, signature, room_id):
+    emit("incoming", (username, message, "black", True, signature), to=room_id)
     
 # join room event handler
 # sent when the user joins a room
@@ -67,9 +67,9 @@ def join(sender_name, receiver_name):
         room.join_room(sender_name, room_id)
         join_room(room_id)
         # emit to everyone in the room except the sender
-        emit("incoming", (f"{sender_name} has joined the room.", "green"), to=room_id, include_self=False)
+        emit("incoming", ("system", f"{sender_name} has joined the room.", "green", False), to=room_id, include_self=False)
         # emit only to the sender
-        emit("incoming", (f"{sender_name} has joined the room. Now talking to {receiver_name}.", "green"))
+        emit("incoming", ("system", f"{sender_name} has joined the room. Now talking to {receiver_name}.", "green", False))
         return room_id
 
     # if the user isn't inside of any room, 
@@ -77,13 +77,13 @@ def join(sender_name, receiver_name):
     # or is simply a new user looking to chat with someone
     room_id = room.create_room(sender_name, receiver_name)
     join_room(room_id)
-    emit("incoming", (f"{sender_name} has joined the room. Now talking to {receiver_name}.", "green"), to=room_id)
+    emit("incoming", ("system", f"{sender_name} has joined the room. Now talking to {receiver_name}.", "green", False), to=room_id)
     return room_id
 
 # leave room event handler
 @socketio.on("leave")
 def leave(username, room_id):
-    emit("incoming", (f"{username} has left the room.", "red"), to=room_id)
+    emit("incoming", ("system", f"{username} has left the room.", "red", False), to=room_id)
     leave_room(room_id)
     room.leave_room(username)
 
@@ -96,3 +96,11 @@ def handle_get_public_key(username):
         emit('public_key_response', {'public_key': user.pubKey})
     else:
         emit('public_key_response', {'error': 'User not found'})
+
+@socketio.on('get_private_key')
+def handle_get_private_key(username):
+    user = db.get_user(username)
+    if user:
+        emit('private_key_response', {'private_key': user.priKey})
+    else:
+        emit('private_key_response', {'error': 'User not found'})

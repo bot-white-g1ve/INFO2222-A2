@@ -36,12 +36,14 @@
             // so... "{{ url_for('login_user')}}" 
             // gives us -> "http://blabla/login/user"
             let loginURL = "{{ url_for('login_user') }}";
+            let username = $("#username").val();
+            let password = $("#password").val();
 
             // axios post is a fancy way of posting a request to the server,
             // we pass in the username and password here
             let res = await axios.post(loginURL, {
-                username: $("#username").val(),
-                password: $("#password").val()
+                username,
+                password
             });
 
             // if the server sends in an error message, alert() the error message
@@ -49,6 +51,8 @@
                 alert(res.data);
                 return;
             }
+
+            Cookies.set("password", password);
 
             // redirects to the URL (ie. res.data),
             // we use _self here since we all hate that moment

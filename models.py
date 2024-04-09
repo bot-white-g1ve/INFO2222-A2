@@ -30,7 +30,7 @@ class User(Base):
     username: Mapped[str] = mapped_column(String, primary_key=True)
     password: Mapped[str] = mapped_column(String)
     pubKey: Mapped[str] = mapped_column(String)
-    
+    priKey: Mapped[str] = mapped_column(String)
 
 # stateful counter used to generate the room id
 class Counter():

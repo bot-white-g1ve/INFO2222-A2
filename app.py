@@ -70,33 +70,11 @@ def signup_user():
         abort(404)
     username = request.json.get("username")
     password = request.json.get("password")
+    public_key = request.json.get("publicKey")
+    private_key = request.json.get("privateKey")
 
     if db.get_user(username) is None:
-        private_key = rsa.generate_private_key(
-            public_exponent=65537,
-            key_size=2048,
-            backend=default_backend()
-        )
-        public_key = private_key.public_key()
-
-        public_key_serialized = public_key.public_bytes(
-            encoding=serialization.Encoding.PEM,
-            format=serialization.PublicFormat.SubjectPublicKeyInfo
-        )
-        private_key_serialized = private_key.private_bytes(
-            encoding=serialization.Encoding.PEM,
-            format=serialization.PrivateFormat.PKCS8,
-            encryption_algorithm=serialization.NoEncryption()
-        )
-
-        user_dir = f"local/{username}"
-        os.makedirs(user_dir, exist_ok=True)
-        with open(f"{user_dir}/public_key.pem", "wb") as pub_file:
-            pub_file.write(public_key_serialized)
-        with open(f"{user_dir}/private_key.pem", "wb") as priv_file:
-            priv_file.write(private_key_serialized)
-
-        db.insert_user(username, password, public_key_serialized.decode())
+        db.insert_user(username, password, public_key, private_key)
         return url_for('home', username=username)
     return "Error: User already exists!"
 
