@@ -56,7 +56,7 @@ def login_user():
     if user is None:
         return "Error: User does not exist!"
 
-    if not check_password_hash(user.password, password):
+    if user.password != password:
         return "Error: Password does not match!"
     
     session['username'] = username
@@ -81,10 +81,9 @@ def signup_user():
     
     if username == "system":
         return "Error: Invalid username!"
-        
-    password_hash = generate_password_hash(password)
+    
     if db.get_user(username) is None:
-        db.insert_user(username, password_hash, public_key, private_key)
+        db.insert_user(username, password, public_key, private_key)
         return url_for('home', username=username)
     return "Error: User already exists!"
 
