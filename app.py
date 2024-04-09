@@ -4,7 +4,7 @@ this is where you'll find all of the get/post request handlers
 the socket event handlers are inside of socket_routes.py
 '''
 
-from flask import Flask, render_template, request, abort, url_for, redirect, session
+from flask import Flask, jsonify, render_template, request, abort, url_for, redirect, session
 from flask_socketio import SocketIO
 from werkzeug.security import generate_password_hash, check_password_hash
 
@@ -150,6 +150,7 @@ def accept_friend():
         return f"successfully accepted the request from {friend_name}"
     else:
         return f"unable to accepet request."
+    
 
 if __name__ == '__main__':
     socketio.run(app)

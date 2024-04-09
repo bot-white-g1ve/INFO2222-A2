@@ -58,6 +58,11 @@ def join(sender_name, receiver_name):
     sender = db.get_user(sender_name)
     if sender is None:
         return "Unknown sender!"
+    
+    friends = db.get_all_friends_of_current_user(sender_name)
+    if receiver not in friends:
+        return "Not a friend!"
+        
 
     room_id = room.get_room_id(receiver_name)
 

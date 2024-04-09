@@ -195,7 +195,7 @@
     function join_room() {
        
         let receiver = $("#receiver").val();
-
+        
         // pass in the receiver of our message to the server
         // as well as the current user's username
         socket.emit("join", username, receiver, (res) => {
