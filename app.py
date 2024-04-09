@@ -145,12 +145,6 @@ def accept_friend():
         return f"successfully accepted the request from {friend_name}"
     else:
         return f"unable to accepet request."
-        
-    
-
-
-    
-
 
 if __name__ == '__main__':
     socketio.run(app)
