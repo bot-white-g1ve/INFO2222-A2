@@ -4,11 +4,11 @@ this is where you'll find all of the get/post request handlers
 the socket event handlers are inside of socket_routes.py
 '''
 
-from flask import Flask, render_template, request, abort, url_for, jsonify
+from flask import Flask, render_template, request, abort, url_for, redirect, session
 from flask_socketio import SocketIO
+from werkzeug.security import check_password_hash
 import db
 import secrets
-import os
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.primitives import serialization
@@ -35,10 +35,15 @@ import socket_routes
 def index():
     return render_template("index.jinja")
 
+
 # login page
 @app.route("/login")
-def login():    
+def login():
+    if request.method == 'POST':
+        session['username'] = request.form['username']
+        return redirect(url_for('index'))
     return render_template("login.jinja")
+
 
 # handles a post request when the user clicks the log in button
 @app.route("/login/user", methods=["POST"])
@@ -48,8 +53,10 @@ def login_user():
 
     username = request.json.get("username")
     password = request.json.get("password")
+    #print(username, password)
 
-    user =  db.get_user(username)
+    user = db.get_user(username)
+    #print(user.password)
     if user is None:
         return "Error: User does not exist!"
 
@@ -78,6 +85,7 @@ def signup_user():
         return url_for('home', username=username)
     return "Error: User already exists!"
 
+
 # handler when a "404" error happens
 @app.errorhandler(404)
 def page_not_found(_):
@@ -88,9 +96,61 @@ def page_not_found(_):
 def home():
     if request.args.get("username") is None:
         abort(404)
-    return render_template("home.jinja", username=request.args.get("username"))
 
-# Below are new functions
+    username = request.args.get("username")
+    #FIXME 设置session,记录当前登录用户信息
+    session['current_user'] = username
+    session.permanent = True
+    # FIXME 找到当前用户所有的朋友， 并交给模板宣染
+    friends = db.get_all_friends_of_current_user(username)
+    requests = db.get_all_request(username)
+    return render_template("home.jinja", username=request.args.get("username"), friends=friends, requests = requests)
+
+
+@app.route("/add_friend")
+def add_friend():
+    if request.args.get("friend_name") is None:
+        return f"need a friend username"
+    #FIXME 从当前会话中获取登录用户信息
+    current_user = session.get('current_user', None)
+    if current_user is None:
+        return "session expired, try to re-log in"
+    friend_name = request.args.get("friend_name")
+    if friend_name == current_user:
+        return "You can't send request to yourself"
+    
+    success = db.request_friend(current_user, friend_name )
+    if success:
+        return f"successful to send the friend request to {friend_name}"
+    else:
+        return f"failed to send the friend request to {friend_name}"
+    
+@app.route("/reject_friend")
+def reject_friend():
+    current_user = session.get('current_user', None)
+    if current_user is None:
+        return "session expired, try to re-log in"
+    friend_name = request.args.get("friend_name")
+    db.rejected_friend(current_user, friend_name )
+    return f"rejected {friend_name}"
+
+@app.route("/accept_friend")
+def accept_friend():
+    current_user = session.get('current_user', None)
+    if current_user is None:
+        return "session expired, try to re-log in"
+    friend_name = request.args.get("friend_name")
+    success = db.accept_friend(current_user, friend_name )
+    if success:
+        return f"successfully accepted the request from {friend_name}"
+    else:
+        return f"unable to accepet request."
+        
+    
+
+
+    
+
 
 if __name__ == '__main__':
     socketio.run(app)

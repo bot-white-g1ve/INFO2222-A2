@@ -10,28 +10,37 @@ Prisma docs also looks so much better in comparison
 or use SQLite, if you're not into fancy ORMs (but be mindful of Injection attacks :) )
 '''
 
-from sqlalchemy import String
+from sqlalchemy import String,Column,Integer
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+from sqlalchemy.ext.declarative import declarative_base
 from typing import Dict
 
-# data models
+
+
+Base =  declarative_base()
+
 class Base(DeclarativeBase):
     pass
 
+# data models
 # model to store user information
 class User(Base):
     __tablename__ = "user"
-    
-    # looks complicated but basically means
-    # I want a username column of type string,
-    # and I want this column to be my primary key
-    # then accessing john.username -> will give me some data of type string
-    # in other words we've mapped the username Python object property to an SQL column of type String 
     username: Mapped[str] = mapped_column(String, primary_key=True)
     password: Mapped[str] = mapped_column(String)
     pubKey: Mapped[str] = mapped_column(String)
     priKey: Mapped[str] = mapped_column(String)
 
+class Friendship(Base):
+    __tablename__ = "friendships"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user1: Mapped[str] = mapped_column(String)
+    user2: Mapped[str] = mapped_column(String)
+    status: Mapped[str] = mapped_column(String,default="rejected")#accepted/requested/rejected
+
+    
+    
+    
 # stateful counter used to generate the room id
 class Counter():
     def __init__(self):

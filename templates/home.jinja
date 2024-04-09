@@ -24,40 +24,87 @@
         margin-bottom: 2px;
     }
 
+    .sidebar {
+        width: 20%;
+        margin-left: 20px;
+        padding: 10px;
+        border-left: 1px solid #ccc;
+        float: right;
+        position: fixed;
+        top: 100px;
+        right: 10px;
+    }
+    .sidebar ul {
+        list-style: none;
+        padding: 0;
+    }
+
+    .sidebar ul li {
+        margin-bottom: 10px;
+    }
+
 </style>
 
-<!--Navbar, you'll see the username here-->
-<nav style="border-bottom: 1px solid black;">
-    <ol style="float: right">
-        <li style="display:inline-block">Username:  {{ username }} </li>
-    </ol>
-</nav>
+<div class="content-container">
+    <main>
+        <!--Navbar, you'll see the username here-->
+        <nav style="border-bottom: 1px solid black;">
+            <ol style="float: right">
+                <li style="display:inline-block">Username:  {{ username }} </li>
+            </ol>
+        </nav>
 
-<h1>Messaging App </h1>
+        <h1>Messaging App </h1>
 
-<main>
-    <!-- The messages are displayed here -->
-    <section id="message_box"></section>
+        <section id="message_box"></section>
+        
+        <section id="chat_box">
+            <p class="text">Chat with: </p>
+            <input id="receiver" placeholder="username">
+            <!-- MDN says its bad practice to use the onclick attribute,
+            but we're using it anyways coz its easy :)-->
+            <button onclick="join_room()">Chat</button>
+        </section>
 
-    <!-- These part ideally should be a form element, 
-    but I wrote this code a year ago and I don't want to break anything...-->
-    <section id="chat_box">
-        <p class="text">Chat with: </p>
-        <input id="receiver" placeholder="username">
-        <!-- MDN says its bad practice to use the onclick attribute,
-        but we're using it anyways coz its easy :)-->
-        <button onclick="join_room()">Chat</button>
-    </section>
-
-    <!-- The (message) input box is set to display: none initially, 
-    this means the input box is "invisible" initially-->
-    <section id="input_box" style="display: none" >
-        <p class="text">Message: </p>
-        <input id="message" placeholder="message">
-        <button onclick="send()">Send</button>
-        <button onclick="leave()">Leave Room</button>
-    </section>
-</main>
+        <!-- The (message) input box is set to display: none initially, 
+        this means the input box is "invisible" initially-->
+        <section id="input_box" style="display: none">
+            <p class="text">Message: </p>
+            <input id="message" placeholder="message" style="display:inline-block;min-width: 400px">
+            <button onclick="send()">Send</button>
+            <button onclick="leave()">Leave Room</button>
+        </section>
+    </main>
+    <!-- Sidebar for friend list -->
+    <aside class="sidebar">
+        <h2>Friends</h2>
+        {% if friends %}
+            <ul>
+            {% for friend in friends %}
+                    <li>&DoubleRightArrow; {{ friend }}</li> 
+            {% endfor %}
+            </ul>
+        {% else %}
+            <p>No friends to show.</p>
+        {% endif %}
+    <div>
+        <input id="friend_name" placeholder="Enter a friend name" style="margin-right: 5px"/><button onclick="add_friend()">Add friend</button>
+    </div>
+        <h2>Requests</h2>
+        {% if requests %}
+            <ul>
+                {% for request in requests %}
+                        <li>&DoubleRightArrow; {{ request }}</li> 
+                        <button onclick="accept_friend('{{ request }}')">Accept</button>
+                        <button onclick="reject_friend('{{ request }}')">Reject</button>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <p>No request.</p>
+        {% endif %}
+    </div>
+    </aside>
+</div>
 
 <script src="/static/js/libs/socket.io.min.js"></script>
 <script>
@@ -94,9 +141,7 @@
         room_id = parseInt(Cookies.get("room_id"));
         receiver = Cookies.get("receiver");
     })
-    
-    // Here's the Socket IO part of the code
-    // things get a bit complicated here so brace yourselves :P
+
     let username = "{{ username }}";
 
     Cookies.set('username', username);
@@ -118,6 +163,33 @@
         add_message(username, message, "black", false);
         requestPublicKeyAndSend(username, receiver, message, room_id);
     } 
+
+    async function add_friend() {
+        let res = await axios.get("{{ url_for('add_friend') }}", {
+            params: {
+                friend_name: $("#friend_name").val(),
+            }
+        });
+        alert(res.data)
+    }
+
+    async function accept_friend(friendName) {
+        let res = await axios.get("{{ url_for('accept_friend') }}", {
+            params: {
+                friend_name: friendName,
+            }
+        });
+        alert(res.data)
+    }
+    
+    async function reject_friend(friendName) {
+        let res = await axios.get("{{ url_for('reject_friend') }}", {
+            params: {
+                friend_name: friendName,
+            }
+        });
+        alert(res.data)
+    }
 
     // we emit a join room event to the server to join a room
     function join_room() {
@@ -143,7 +215,7 @@
             $("#chat_box").hide();
             $("#input_box").show();
         });
-    
+     
     }
 
     // function when the user clicks on "Leave Room"
