@@ -160,8 +160,8 @@
         let message = $("#message").val();
         $("#message").val("");
         let receiver = $("#receiver").val();
-        add_message(username, message, "black", false);
         requestPublicKeyAndSend(username, receiver, message, room_id);
+        add_message(username, message, "black", false);
     } 
 
     async function add_friend() {
@@ -238,6 +238,7 @@
             let box = $("#message_box");
             let child = $(`<p style="color:${color}; margin: 0px;"></p>`).text(text);
             box.append(child);
+            requestOwnPublickeyAndSave(user, message, color);
         } else if (encrypted === true){
             if (user === username){
                 ;
@@ -248,12 +249,14 @@
                     return decryptMessage(message, priKeyBase64);
                 })
                 .then(decryptedMessage => {
+                    // check signature for integrity
                     return requestPublicKey_and_check_signature(decryptedMessage, signature, user)
                     .then(isValidSignature => {
                         let text;
                         let msgColor = "black";
                         if (isValidSignature) {
                             text = `${user}: ${decryptedMessage}`;
+                            sendMessageForSave(user, message, color);
                         } else {
                             text = 'Message has been modified, please contact the admin immediately!';
                             msgColor = "red";
@@ -276,7 +279,7 @@
         socket.emit('get_public_key', receiver);
 
         socket.once('public_key_response', function(data) {
-            console.log("Public key response received:", data); //d
+            console.log("(In requestPublicKeyAndSend) Public key response received:", data); //d
 
             if (data.error) {
                 console.error("Error getting public key:", data.error);
@@ -542,9 +545,62 @@
             return privateKey;
         } catch (error) {
             console.error("Decryption failed:", error);
-        }
-        
+        }   
     }
 
+    function sendMessageForSave(sender, message, color){
+        receiver = Cookies.get("receiver");
+        console.log("(In sendMessageForSave) save_message emitted: ", {message, username, receiver, sender, color});
+        socket.emit('save_message', message, username, receiver, sender, color);
+    }
+
+    function requestOwnPublickeyAndSave(sender, message, color){
+        if (Cookies.get("publickey")){
+            pubKey = Cookies.get("publickey");
+            console.log("(In requestOwnPublickeyAndEncrypt) Get public key from cookie: ", pubKey)
+
+        } else {
+            socket.emit('get_public_key', username);
+
+            socket.once('public_key_response', function(data) {
+                console.log("(In request_own_publickey_and_encrypt_for_save) Public key response received:", data); //d
+
+                if (data.error) {
+                    console.error("Error getting public key:", data.error);
+                    return;
+                }
+
+                encryptAndSave(sender, message, color, data.public_key);
+            });
+        }
+    }
+
+    async function encryptAndSave(sender, message, color, publicKeyStr){
+        try {
+            const publicKey = await window.crypto.subtle.importKey(
+                "spki",
+                str2ab(publicKeyStr),
+                {
+                    name: "RSA-OAEP",
+                    hash: {name: "SHA-256"},
+                },
+                true,
+                ["encrypt"]
+            );
+
+            const encrypted = await window.crypto.subtle.encrypt(
+                {
+                    name: "RSA-OAEP",
+                },
+                publicKey,
+                new TextEncoder().encode(message)
+            );
+
+            const encryptedMessage = arrayBufferToBase64(encrypted);
+            sendMessageForSave(sender, encryptedMessage, color);
+        } catch (error) {
+            console.error("Error during encryption or sending:", error);
+        }
+    }
 </script>
 {% endblock %}

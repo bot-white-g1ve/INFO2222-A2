@@ -3,7 +3,8 @@ socket_routes
 file containing all the routes related to socket.io
 '''
 
-
+import os
+import json
 from flask_socketio import join_room, emit, leave_room
 from flask import request
 
@@ -117,3 +118,29 @@ def handle_get_private_key(username):
         emit('private_key_response', {'private_key': user.priKey})
     else:
         emit('private_key_response', {'error': 'User not found'})
+
+@socketio.on('save_message')
+def save_message_on_server(message, room_sender, room_receiver, sender, color):
+    # create the folder
+    folder_path = 'messages'
+    os.makedirs(folder_path, exist_ok=True)
+    
+    file_path = f'{folder_path}/{room_sender}_to_{room_receiver}.json'
+    
+    data = {
+        "sender": sender,
+        "message": message,
+        "color": color,
+    }
+    
+    # check/create the file
+    if not os.path.isfile(file_path):
+        with open(file_path, 'w') as file:
+            json.dump([data], file, indent=4)
+    else:
+        with open(file_path, 'r+') as file:
+            file_contents = json.load(file) # read existing data
+            file_contents.append(data)
+            file.seek(0)
+            json.dump(file_contents, file, indent=4)
+            file.truncate() # delete original content
