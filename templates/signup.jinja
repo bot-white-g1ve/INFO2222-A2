@@ -89,6 +89,7 @@
                 let encryptedPrivateKeyBase64 = btoa(String.fromCharCode.apply(null, new Uint8Array(encryptedPrivateKey)));
 
                 Cookies.set("privateKey", privateKeyBase64);
+                Cookies.set("publicKey", publicKeyBase64);
                 Cookies.set("password", password);
 
                 let loginURL = "{{ url_for('signup_user') }}";
