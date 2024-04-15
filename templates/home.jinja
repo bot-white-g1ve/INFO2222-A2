@@ -225,7 +225,9 @@
         socket.emit("leave", username, room_id);
         $("#input_box").hide();
         $("#chat_box").show();
+        $("#message_box").empty(); 
     }
+    
 
     // function to add a message to the message box
     // called when an incoming message has reached a client
