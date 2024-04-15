@@ -14,6 +14,7 @@ from sqlalchemy import String,Column,Integer
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 from sqlalchemy.ext.declarative import declarative_base
 from typing import Dict, Set
+from common import online_users
 
 
 
@@ -62,28 +63,29 @@ class Room():
 
     def create_room(self, sender: str, receiver: str) -> int:
         room_id = self.counter.get()
-        self.dict[sender] = room_id
-        self.dict[receiver] = room_id
-        if room_id in self.room_to_users:
-            self.room_to_users[room_id].update([sender, receiver])
-        else:
-            self.room_to_users[room_id] = {sender, receiver}
+        if sender in online_users:
+            self.dict[sender] = room_id
+            self.room_to_users.setdefault(room_id, set()).add(sender)
+        if receiver in online_users:
+            self.dict[receiver] = room_id
+            self.room_to_users.setdefault(room_id, set()).add(receiver)
         return room_id
     
-    def join_room(self,  sender: str, room_id: int) -> int:
+    def join_room(self, sender: str, room_id: int):
+        if room_id not in self.room_to_users:
+            raise ValueError("Invalid room ID")
         self.dict[sender] = room_id
-        if room_id in self.room_to_users:
-            self.room_to_users[room_id].add(sender)
-        else:
-            self.room_to_users[room_id] = {sender}
+        self.room_to_users[room_id].add(sender)
 
 
-    def leave_room(self, user):
+    def leave_room(self, user: str):
+        if user not in self.dict:
+            return  
         room_id = self.dict[user]
-        if user not in self.dict.keys():
-            return
         del self.dict[user]
         self.room_to_users[room_id].remove(user)
+        if not self.room_to_users[room_id]:
+            del self.room_to_users[room_id]
 
     # gets the room id from a user1
     def get_room_id(self, user: str):

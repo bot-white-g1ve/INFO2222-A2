@@ -7,6 +7,7 @@ import os
 import json
 from flask_socketio import join_room, emit, leave_room
 from flask import request
+from common import online_users
 
 try:
     from __main__ import socketio
@@ -18,7 +19,6 @@ from models import Room
 import db
 
 room = Room()
-online_users = set()
 # when the client connects to a socket
 # this event is emitted when the io() function is called in JS
 @socketio.on('connect')
@@ -40,20 +40,19 @@ def connect():
 def disconnect():
     username = request.cookies.get("username")
     if username:
-        online_users.remove(username)
-    room_id = request.cookies.get("room_id")
-    if room_id is None or username is None:
-        return
-    emit("incoming", ("system", f"{username} has disconnected", "red", False), to=int(room_id))
+        online_users.discard(username)
+        room_id = request.cookies.get("room_id")
+        if room_id:
+            emit("incoming", ("system", f"{username} has disconnected", "red", False), to=int(room_id))
 
 # send message event handler
 @socketio.on("send")
 def send(username, message, signature, room_id):
-    receiver = room.get_receiver_name(room_id, username)  
+    receiver = room.get_receiver_name(room_id, username)
     if receiver not in online_users:
         emit("incoming", ("system", "The receiver is off-line", "red", False))
-        return
-    emit("incoming", (username, message, "black", True, signature), to=room_id)
+    else:
+        emit("incoming", (username, message, "black", True, signature), to=room_id)
 
 '''   
 #For testing message modification
@@ -111,6 +110,7 @@ def leave(username, room_id):
     emit("incoming", ("system", f"{username} has left the room.", "red", False), to=room_id)
     leave_room(room_id)
     room.leave_room(username)
+    online_users.discard(username)
 
 # Below are new functions
 
