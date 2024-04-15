@@ -170,6 +170,7 @@
         //console.log("send called"); //d
         let message = $("#message").val();
         $("#message").val("");
+        receiver = Cookies.get("receiver");
         if (message !== ""){
             console.log("(In send) RequestPublickeyAndSend called: ", {room_id, username, message, receiver}) //d
             requestPublicKeyAndSend(username, receiver, message, room_id);
@@ -210,6 +211,7 @@
     function join_room() {
         let receiver = $("#receiver").val();
         Cookies.set("receiver", receiver);
+        console.log("(In join_room) join emitted with ", receiver);
         // pass in the receiver of our message to the server
         // as well as the current user's username
         socket.emit("join", username, receiver, (res) => {
@@ -225,6 +227,7 @@
             room_id = res;
             
             Cookies.set("room_id", room_id);
+            console.log("(In join_room) the server returns ", room_id)
 
             // now we'll show the input box, so the user can input their message
             $("#chat_box").hide();
