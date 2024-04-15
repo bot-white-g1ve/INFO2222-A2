@@ -163,9 +163,13 @@
         //console.log("send called"); //d
         let message = $("#message").val();
         $("#message").val("");
-        console.log("(In send) RequestPublickeyAndSend called: ", {room_id, username, message, receiver}) //d
-        requestPublicKeyAndSend(username, receiver, message, room_id);
-        add_message(username, message, "black", false);
+        if (message !== ""){
+            console.log("(In send) RequestPublickeyAndSend called: ", {room_id, username, message, receiver}) //d
+            requestPublicKeyAndSend(username, receiver, message, room_id);
+            add_message(username, message, "black", false);
+        }else {
+            console.log("(In send) message is empty, abondon");
+        }
     } 
 
     async function add_friend() {
@@ -232,13 +236,14 @@
     }
     
     function clearMessage(){
+        console.log("(In clearMessage) message cleared");
         $("#message_box").empty(); 
     }
 
     // function to add a message to the message box
     // called when an incoming message has reached a client
     function add_message(user, message, color, encrypted, signature="") {
-        console.log("incoming: ", {user, message, color, encrypted, signature}); //d
+        console.log("(In add_message) Received: ", {user, message, color, encrypted, signature}); //d
         if (encrypted === false) {
             const text = `${user}: ${message}`;
             let box = $("#message_box");
@@ -251,7 +256,7 @@
             } else if (user !== username){
                 getPrivateKey(username)
                 .then(priKeyBase64 => {
-                    console.log("private key get: ", {priKeyBase64});
+                    console.log("(In add message) private key get, use it to decrypt message: ", {priKeyBase64});
                     return decryptMessage(message, priKeyBase64);
                 })
                 .then(decryptedMessage => {
@@ -286,10 +291,10 @@
     }
 
     function requestPublicKeyAndSend(username, receiver, message, room_id) {
+        console.log("(In requestPublicKeyAndSend) get_public_key emitted with ", receiver)
+        socket.emit('get_public_key_for_send', receiver);
 
-        socket.emit('get_public_key', receiver);
-
-        socket.once('public_key_response', function(data) {
+        socket.once('public_key_response_for_send', function(data) {
             console.log("(In requestPublicKeyAndSend) Public key response received:", data); //d
 
             if (data.error) {
@@ -428,8 +433,9 @@
 
     function requestPublicKey_and_check_signature(message, signatureBase64, sender) {
         return new Promise((resolve, reject) => {
-            socket.emit('get_public_key', sender);
-            socket.once('public_key_response', async function(data) {
+            console.log("(In requestPublicKey_and_check_signature) get_public_key emitted with ", {sender});
+            socket.emit('get_public_key_for_check', sender);
+            socket.once('public_key_response_for_check', async function(data) {
                 if (data.error) {
                     console.error("Error getting public key:", data.error);
                     reject("Error getting public key");
@@ -437,6 +443,8 @@
                 }
 
                 try {
+                    console.log("(In requestPublicKey_and_check_signature) public key get, decrypt and comparing: ", {message, signatureBase64, publicKey:data.public_key});
+
                     const publicKeyBuffer = str2ab(data.public_key);
                     const publicKey = await window.crypto.subtle.importKey(
                         "spki",
@@ -462,6 +470,7 @@
                         messageBuffer
                     );
 
+                    console.log("(In requestPublicKey_and_check_signature) the comparing result is ",{isValid});
                     resolve(isValid);
                 } catch (error) {
                     console.error("Error verifying signature:", error);
@@ -472,17 +481,16 @@
     }
 
     function getPrivateKey(username) {
-
         return new Promise((resolve, reject) => {
             if (Cookies.get("privateKey")) {
                 let privateKey = Cookies.get("privateKey");
-                console.log("get private key from cookie: ",{username, privateKey});
+                console.log("(getPrivateKey) get private key from cookie: ",{username, privateKey});
                 resolve(privateKey);
             } else {
                 socket.emit('get_private_key', username);
 
                 socket.once('private_key_response', function(data) {
-                    console.log("Private key response received:", {username, privateKey:data.private_key});
+                    console.log("(getPrivateKey) Private key response received:", {username, privateKey:data.private_key});
 
                     if (data.error) {
                         console.error("Error getting private key:", data.error);
@@ -567,11 +575,11 @@
         if (Cookies.get("publickey")){
             pubKey = Cookies.get("publickey");
             console.log("(In requestOwnPublickeyAndEncrypt) Get public key from cookie: ", pubKey)
-
+            encryptAndSave(sender, message, color, pubKey);
         } else {
-            socket.emit('get_public_key', username);
+            socket.emit('get_public_key_for_save', username);
 
-            socket.once('public_key_response', function(data) {
+            socket.once('public_key_response_for_save', function(data) {
                 console.log("(In request_own_publickey_and_encrypt_for_save) Public key response received:", data); //d
 
                 if (data.error) {
@@ -579,6 +587,7 @@
                     return;
                 }
 
+                Cookies.set("publicKey", data.publicKey)
                 encryptAndSave(sender, message, color, data.public_key);
             });
         }
