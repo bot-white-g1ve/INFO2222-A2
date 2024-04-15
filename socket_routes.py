@@ -46,7 +46,6 @@ def disconnect():
         return
     emit("incoming", ("system", f"{username} has disconnected", "red", False), to=int(room_id))
 
-'''
 # send message event handler
 @socketio.on("send")
 def send(username, message, signature, room_id):
@@ -55,8 +54,8 @@ def send(username, message, signature, room_id):
         emit("incoming", ("system", "The receiver is off-line", "red", False))
         return
     emit("incoming", (username, message, "black", True, signature), to=room_id)
-'''
     
+'''
 #For testing message modification
 import base64
 @socketio.on("send")
@@ -65,7 +64,8 @@ def send(username, message, signature, room_id):
     #encoded_modified_message = base64.b64encode(modified_message.encode('utf-8')).decode('utf-8')
     
     emit("incoming", (username, modified_message, "black", True, signature), to=room_id)
-    
+'''
+
 # join room event handler
 # sent when the user joins a room
 @socketio.on("join")

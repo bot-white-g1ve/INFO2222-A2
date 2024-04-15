@@ -153,8 +153,8 @@
     // an incoming message arrives, we'll add the message to the message box
     socket.on("incoming", (user, msg, color="black", encrypted, signature="") => {
         add_message(user, msg, color, encrypted, signature);
-        if (user === 'system' && msg === ''){
-            ;
+        if (user === 'system' && msg === `${username} has left the room.`){
+            clearMessage();
         }
     });
     
