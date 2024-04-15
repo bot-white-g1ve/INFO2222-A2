@@ -150,6 +150,10 @@
     // initializes the socket
     const socket = io();
 
+    socket.on("history", (user, msg, color, encrypted) => {
+        load_old_message(user, msg, color, encrypted);
+    });
+
     // an incoming message arrives, we'll add the message to the message box
     socket.on("incoming", (user, msg, color="black", encrypted, signature="") => {
         add_message(user, msg, color, encrypted, signature);
@@ -202,12 +206,14 @@
     // we emit a join room event to the server to join a room
     function join_room() {
         let receiver = $("#receiver").val();
+        Cookies.set("receiver", receiver);
         // pass in the receiver of our message to the server
         // as well as the current user's username
         socket.emit("join", username, receiver, (res) => {
             // res is a string with the error message if the error occurs
             // this is a pretty bad way of doing error handling, but watevs
             if (typeof res != "number") {
+                Cookies.remove("receiver");
                 alert(res);
                 return;
             }
@@ -216,7 +222,6 @@
             room_id = res;
             
             Cookies.set("room_id", room_id);
-            Cookies.set("receiver", receiver);
 
             // now we'll show the input box, so the user can input their message
             $("#chat_box").hide();
@@ -229,7 +234,7 @@
     // emits a "leave" event, telling the server that we want to leave the room
     function leave() {
         Cookies.remove("room_id");
-        Cookies.remove("receiver")
+        //Cookies.remove("receiver");
         socket.emit("leave", username, room_id);
         $("#input_box").hide();
         $("#chat_box").show();
@@ -249,7 +254,9 @@
             let box = $("#message_box");
             let child = $(`<p style="color:${color}; margin: 0px;"></p>`).text(text);
             box.append(child);
-            requestOwnPublickeyAndSave(user, message, color);
+            if (user !== "system"){
+                requestOwnPublickeyAndSave(user, message, color);
+            }
         } else if (encrypted === true){
             if (user === username){
                 ;
@@ -580,14 +587,14 @@
             socket.emit('get_public_key_for_save', username);
 
             socket.once('public_key_response_for_save', function(data) {
-                console.log("(In request_own_publickey_and_encrypt_for_save) Public key response received:", data); //d
+                console.log("(In requestOwnPublickeyAndEncryptForSave) Public key response received:", data); //d
 
                 if (data.error) {
                     console.error("Error getting public key:", data.error);
                     return;
                 }
 
-                Cookies.set("publicKey", data.publicKey)
+                Cookies.set("publicKey", data.public_key)
                 encryptAndSave(sender, message, color, data.public_key);
             });
         }
@@ -620,5 +627,23 @@
             console.error("Error during encryption or sending:", error);
         }
     }
+
+    function load_old_message(user, message, color, encrypted) {
+        console.log("(In load_old_message) Received: ", {user, message, color, encrypted}); //d
+        getPrivateKey(username)
+        .then(priKeyBase64 => {
+            console.log("(In load_old_message) private key get, use it to decrypt message: ", {priKeyBase64});
+            return decryptMessage(message, priKeyBase64);
+        })
+        .then(decryptedMessage => {
+            let text;
+            let msgColor = color;
+            text = `${user}: ${decryptedMessage}`;
+            let box = $("#message_box");
+            let child = $(`<p style="color:${msgColor}; margin: 0px;"></p>`).text(text);
+            box.append(child);
+        });
+    }
+
 </script>
 {% endblock %}

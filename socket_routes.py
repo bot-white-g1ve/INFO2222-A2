@@ -82,10 +82,20 @@ def join(sender_name, receiver_name):
     friends = db.get_all_friends_of_current_user(sender_name)
     if receiver_name not in friends:
         return "Not a friend!"
-        
+    
+    file_path = f"messages/{sender_name}_to_{receiver_name}.json"
+    try:
+        with open(file_path, 'r') as file:
+            data = json.load(file)
+        for message in data:
+            sender = message.get("sender", "")
+            message_text = message.get("message", "")
+            color = message.get("color", "")
+            emit("history", (sender, message_text, color, True))
+    except FileNotFoundError:
+        pass
 
-    room_id = room.get_room_id(receiver_name)
-
+    room_id = room.get_room_id(receiver_name) # get receiver's room id
     # if the user is already inside of a room 
     if room_id is not None:
         
