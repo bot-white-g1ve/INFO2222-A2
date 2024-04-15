@@ -153,6 +153,9 @@
     // an incoming message arrives, we'll add the message to the message box
     socket.on("incoming", (user, msg, color="black", encrypted, signature="") => {
         add_message(user, msg, color, encrypted, signature);
+        if (user === 'system' && msg === ''){
+            ;
+        }
     });
     
     // we'll send the message to the server by emitting a "send" event
@@ -226,9 +229,11 @@
         socket.emit("leave", username, room_id);
         $("#input_box").hide();
         $("#chat_box").show();
-        $("#message_box").empty(); 
     }
     
+    function clearMessage(){
+        $("#message_box").empty(); 
+    }
 
     // function to add a message to the message box
     // called when an incoming message has reached a client
