@@ -54,8 +54,8 @@ def send(username, message, signature, room_id):
         emit("incoming", ("system", "The receiver is off-line", "red", False))
         return
     emit("incoming", (username, message, "black", True, signature), to=room_id)
-    
-'''
+
+'''   
 #For testing message modification
 import base64
 @socketio.on("send")
