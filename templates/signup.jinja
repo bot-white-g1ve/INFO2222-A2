@@ -22,47 +22,6 @@
                 }
                 return false;
             }
-    
-            // this function is identical to login(), see login.jinja
-            async function signup() {
-                let keyPair = await window.crypto.subtle.generateKey(
-                    {
-                        name: "RSA-OAEP",
-                        modulusLength: 2048,
-                        publicExponent: new Uint8Array([0x01, 0x00, 0x01]),
-                        hash: {name: "SHA-256"},
-                    },
-                    true,
-                    ["encrypt", "decrypt"]
-                );
-    
-                let exportedPublicKey = await window.crypto.subtle.exportKey("spki", keyPair.publicKey);
-                let publicKeyBase64 = btoa(String.fromCharCode.apply(null, new Uint8Array(exportedPublicKey)));
-                let exportedPrivateKey = await window.crypto.subtle.exportKey("pkcs8", keyPair.privateKey);
-                let privateKeyBase64 = btoa(String.fromCharCode.apply(null, new Uint8Array(exportedPrivateKey)));
-    
-                let username = $("#username").val();
-                let password = $("#password").val();
-    
-                let encryptedPrivateKey = await encryptPrivateKey(privateKeyBase64, password, username);
-                let encryptedPrivateKeyBase64 = btoa(String.fromCharCode.apply(null, new Uint8Array(encryptedPrivateKey)));
-    
-                Cookies.set("privateKey", privateKeyBase64);
-                Cookies.set("password", password);
-    
-                let loginURL = "{{ url_for('signup_user') }}";
-                let res = await axios.post(loginURL, {
-                    username: username,
-                    password: password,
-                    publicKey: publicKeyBase64,
-                    privateKey: encryptedPrivateKeyBase64
-                });
-                if (!isValidURL(res.data)) {
-                    alert(res.data);
-                    return;
-                }
-                window.open(res.data, "_self")
-            }
 
             // this function is identical to login(), see login.jinja
             async function signup() {

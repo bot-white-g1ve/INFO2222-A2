@@ -109,6 +109,7 @@
 <script src="/static/js/libs/socket.io.min.js"></script>
 <script>
     let room_id = 0;
+    let receiver = 'system';
 
     // when the user presses the "Enter" key inside of the "message box", 
     // the message is sent to the server
@@ -156,10 +157,10 @@
     
     // we'll send the message to the server by emitting a "send" event
     function send() {
-        console.log("send called"); //d
+        //console.log("send called"); //d
         let message = $("#message").val();
         $("#message").val("");
-        let receiver = $("#receiver").val();
+        console.log("(In send) RequestPublickeyAndSend called: ", {room_id, username, message, receiver}) //d
         requestPublicKeyAndSend(username, receiver, message, room_id);
         add_message(username, message, "black", false);
     } 
@@ -193,9 +194,7 @@
 
     // we emit a join room event to the server to join a room
     function join_room() {
-       
         let receiver = $("#receiver").val();
-        
         // pass in the receiver of our message to the server
         // as well as the current user's username
         socket.emit("join", username, receiver, (res) => {
@@ -208,6 +207,7 @@
 
             // set the room id variable to the room id returned by the server
             room_id = res;
+            
             Cookies.set("room_id", room_id);
             Cookies.set("receiver", receiver);
 
@@ -222,6 +222,7 @@
     // emits a "leave" event, telling the server that we want to leave the room
     function leave() {
         Cookies.remove("room_id");
+        Cookies.remove("receiver")
         socket.emit("leave", username, room_id);
         $("#input_box").hide();
         $("#chat_box").show();
@@ -232,7 +233,7 @@
     // function to add a message to the message box
     // called when an incoming message has reached a client
     function add_message(user, message, color, encrypted, signature="") {
-        console.log("incoming: ", {user, message, color}); //d
+        console.log("incoming: ", {user, message, color, encrypted, signature}); //d
         if (encrypted === false) {
             const text = `${user}: ${message}`;
             let box = $("#message_box");
@@ -267,14 +268,19 @@
                     });
                 })
                 .catch(error => {
-                    console.error("Decryption or signature check failed:", error);
+                    text = 'Message has been modified, please contact the admin immediately!';
+                    msgColor = "red";
+                    let box = $("#message_box");
+                    let child = $(`<p style="color:${msgColor}; margin: 0px;"></p>`).text(text);
+                    box.append(child);
+
+                    alert(text);
                 });
             }
         }
     }
 
     function requestPublicKeyAndSend(username, receiver, message, room_id) {
-        console.log("requestPublicKeyAndSend called with:", {username, receiver, message, room_id}); //d
 
         socket.emit('get_public_key', receiver);
 
@@ -461,19 +467,17 @@
     }
 
     function getPrivateKey(username) {
-        console.log("getPrivateKey called with ", username);
 
         return new Promise((resolve, reject) => {
             if (Cookies.get("privateKey")) {
                 let privateKey = Cookies.get("privateKey");
-                console.log("get private key: ", privateKey);
+                console.log("get private key from cookie: ",{username, privateKey});
                 resolve(privateKey);
             } else {
                 socket.emit('get_private_key', username);
-                console.log("(In getPrivateKey) emitted")
 
                 socket.once('private_key_response', function(data) {
-                    console.log("Private key response received:", data.private_key);
+                    console.log("Private key response received:", {username, privateKey:data.private_key});
 
                     if (data.error) {
                         console.error("Error getting private key:", data.error);
@@ -482,10 +486,10 @@
                     }
 
                     let password = Cookies.get("password");
-                    console.log("(in get private key) get password: ", password);
+                    //console.log("(in get private key) get password: ", password);
 
                     decryptPrivateKey(data.private_key, password, username).then(privateKey => {
-                        console.log("get private key: ", privateKey);
+                        //console.log("get private key: ", privateKey);
                         Cookies.set("privateKey", privateKey);
                         resolve(privateKey);
                     }).catch(error => {
@@ -499,10 +503,10 @@
 
     async function decryptPrivateKey(encryptedPrivateKeyBase64, password, username) {
         try{
-            console.log("(decryptPrivateKey) Starting decryption process"); //d
+            //console.log("(decryptPrivateKey) Starting decryption process"); //d
 
             const encryptedPrivateKey = Uint8Array.from(atob(encryptedPrivateKeyBase64), c => c.charCodeAt(0));
-            console.log("(decryptPrivateKey) Encrypted private key as Uint8Array:", encryptedPrivateKey); //d
+            //console.log("(decryptPrivateKey) Encrypted private key as Uint8Array:", encryptedPrivateKey); //d
 
             const keyMaterial = await crypto.subtle.importKey(
                 "raw",
@@ -524,10 +528,10 @@
                 true,
                 ["encrypt", "decrypt"]
             );
-            console.log("(decryptPrivateKey) Derived key:", key);
+            //console.log("(decryptPrivateKey) Derived key:", key);
 
             const iv = new Uint8Array(12);
-            console.log("(decryptPrivateKey) IV: ", iv);
+            //console.log("(decryptPrivateKey) IV: ", iv);
 
             const decryptedPrivateKey = await crypto.subtle.decrypt(
                 {
@@ -537,10 +541,10 @@
                 key,
                 encryptedPrivateKey
             );
-            console.log("Decryption complete");
+            //console.log("Decryption complete");
 
             const privateKey = new TextDecoder().decode(new Uint8Array(decryptedPrivateKey));
-            console.log("(decryptPrivateKey) Decrypted private key:", privateKey); //d
+            //console.log("(decryptPrivateKey) Decrypted private key:", privateKey); //d
 
             return privateKey;
         } catch (error) {
