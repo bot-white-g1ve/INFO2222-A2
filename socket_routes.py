@@ -7,7 +7,7 @@ import os
 import json
 from flask_socketio import join_room, emit, leave_room
 from flask import request
-from common import online_users
+
 
 try:
     from __main__ import socketio
@@ -24,8 +24,6 @@ room = Room()
 @socketio.on('connect')
 def connect():
     username = request.cookies.get("username")
-    if username:
-        online_users.add(username)
     room_id = request.cookies.get("room_id")
     if room_id is None or username is None:
         return
@@ -40,7 +38,6 @@ def connect():
 def disconnect():
     username = request.cookies.get("username")
     if username:
-        online_users.discard(username)
         room_id = request.cookies.get("room_id")
         if room_id:
             emit("incoming", ("system", f"{username} has disconnected", "red", False), to=int(room_id))
@@ -48,11 +45,23 @@ def disconnect():
 # send message event handler
 @socketio.on("send")
 def send(username, message, signature, room_id):
-    receiver = room.get_receiver_name(room_id, username)
-    if receiver not in online_users:
-        emit("incoming", ("system", "The receiver is off-line", "red", False))
-    else:
-        emit("incoming", (username, message, "black", True, signature), to=room_id)
+    if room_id is None:
+        emit("incoming", ("system", "No room ID provided", "red", False))
+        return
+
+    try:
+        room_id = int(room_id)  
+    except ValueError:
+        emit("incoming", ("system", "Invalid room ID format", "red", False))
+        return
+
+    receiver = room.get_receiver(room_id, username)  
+    
+    if not receiver:
+        emit("incoming", ("system", "Receiver is not in the room", "red", False))
+        return
+
+    emit("incoming", (username, message, "black", True, signature), to=room_id)
 
 '''   
 #For testing message modification
@@ -101,7 +110,7 @@ def join(sender_name, receiver_name):
     # or is simply a new user looking to chat with someone
     room_id = room.create_room(sender_name, receiver_name)
     join_room(room_id)
-    emit("incoming", ("system", f"{sender_name} has joined the room. Now talking to {receiver_name}.", "green", False), to=room_id)
+    emit("incoming", ("system", f"Room Created. {sender_name} has joined the room. Now talking to {receiver_name}.", "green", False), to=room_id)
     return room_id
 
 # leave room event handler
@@ -110,7 +119,6 @@ def leave(username, room_id):
     emit("incoming", ("system", f"{username} has left the room.", "red", False), to=room_id)
     leave_room(room_id)
     room.leave_room(username)
-    online_users.discard(username)
 
 # Below are new functions
 

@@ -94,7 +94,6 @@ def change_friendship_status(user1_username, user2_username, new_status):
 
 
 if __name__ == "__main__":
-    delete_user("2")
     print_table(db_file, "user")
     
     

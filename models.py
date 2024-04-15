@@ -13,8 +13,7 @@ or use SQLite, if you're not into fancy ORMs (but be mindful of Injection attack
 from sqlalchemy import String,Column,Integer
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 from sqlalchemy.ext.declarative import declarative_base
-from typing import Dict, Set
-from common import online_users
+from typing import Dict, List,Tuple
 
 
 
@@ -58,46 +57,44 @@ class Room():
         # dictionary that maps the username to the room id
         # for example self.dict["John"] -> gives you the room id of 
         # the room where John is in
-        self.dict: Dict[str, int] = {}
-        self.room_to_users: Dict[int, Set[str]] = {}
+        self.user_to_room: Dict[str, int] = {}
+        self.room_to_users: Dict[int, List[Tuple[str, bool]]] = {}
+
+
+        
+    
 
     def create_room(self, sender: str, receiver: str) -> int:
-        room_id = self.counter.get()
-        if sender in online_users:
-            self.dict[sender] = room_id
-            self.room_to_users.setdefault(room_id, set()).add(sender)
-        if receiver in online_users:
-            self.dict[receiver] = room_id
-            self.room_to_users.setdefault(room_id, set()).add(receiver)
-        return room_id
+            room_id = self.counter.get()
+            self.user_to_room[sender] = room_id
+            self.user_to_room[receiver] = room_id
+            self.room_to_users[room_id] = [(sender, True), (receiver, False)]
+            return room_id
     
     def join_room(self, sender: str, room_id: int):
         if room_id not in self.room_to_users:
-            raise ValueError("Invalid room ID")
-        self.dict[sender] = room_id
-        self.room_to_users[room_id].add(sender)
-
+            raise ValueError(f"Invalid room ID {room_id}")
+        if sender not in self.user_to_room:
+            self.user_to_room[sender] = room_id
+        self.room_to_users[room_id].append((sender, True))
 
     def leave_room(self, user: str):
-        if user not in self.dict:
-            return  
-        room_id = self.dict[user]
-        del self.dict[user]
-        self.room_to_users[room_id].remove(user)
-        if not self.room_to_users[room_id]:
-            del self.room_to_users[room_id]
+        if user in self.user_to_room:
+            room_id = self.user_to_room[user]
+            self.room_to_users[room_id] = [(u, a) for u, a in self.room_to_users[room_id] if u != user]
+            if not self.room_to_users[room_id]:
+                del self.room_to_users[room_id]
+            del self.user_to_room[user]
 
-    # gets the room id from a user1
     def get_room_id(self, user: str):
-        if user not in self.dict.keys():
-            return None
-        return self.dict[user]
-    
-    def get_receiver_name(self, room_id: int, username: str):
-        users_in_room = self.room_to_users.get(room_id)
-        if users_in_room:
-            for user in users_in_room:
-                if user != username:
-                    return user
+        return self.user_to_room.get(user, None)
+
+    def get_receiver(self, room_id: int, sender: str) -> str:
+        if room_id in self.room_to_users:
+            active_users = [user for user, active in self.room_to_users[room_id] if user != sender and active]
+            if active_users:
+                return active_users[0]
         return None
+
+
     
