@@ -15,12 +15,18 @@ def print_table(cursor, table_name):
         conn.close()
         return  
     
+    # get column names
+    cursor.execute(f"PRAGMA table_info({table_name})")
+    columns = [column[1] for column in cursor.fetchall()]
+    print("Column Names:", columns)
+    
     query = f"SELECT * FROM {table_name}"
     cursor.execute(query)
     rows = cursor.fetchall()
     for row in rows:
-        print(row)
-    conn.close()
+        for column, data in zip(columns, row):
+            print(f"{column}: {data}")
+        print("")
 
 def delete_table(cursor, table_name):
     # 测试表是否存在
@@ -46,8 +52,8 @@ if __name__ == '__main__':
     conn = sqlite3.connect(db_file)
     cursor = conn.cursor()
     #show_all_table(db_file)
-    #print_table(cursor, "user")
-    delete_table(cursor, "user")
+    print_table(cursor, "user")
+    #delete_table(cursor, "user")
     #add_column(cursor, "user", "priKey")
     conn.commit()
     conn.close()

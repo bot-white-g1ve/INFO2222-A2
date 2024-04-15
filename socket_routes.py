@@ -62,8 +62,8 @@ def send(username, message, signature, room_id):
         return
 
     emit("incoming", (username, message, "black", True, signature), to=room_id)
-
-'''   
+    
+'''
 #For testing message modification
 import base64
 @socketio.on("send")
@@ -90,10 +90,20 @@ def join(sender_name, receiver_name):
     friends = db.get_all_friends_of_current_user(sender_name)
     if receiver_name not in friends:
         return "Not a friend!"
-        
+    
+    file_path = f"messages/{sender_name}_to_{receiver_name}.json"
+    try:
+        with open(file_path, 'r') as file:
+            data = json.load(file)
+        for message in data:
+            sender = message.get("sender", "")
+            message_text = message.get("message", "")
+            color = message.get("color", "")
+            emit("history", (sender, message_text, color, True))
+    except FileNotFoundError:
+        pass
 
-    room_id = room.get_room_id(receiver_name)
-
+    room_id = room.get_room_id(receiver_name) # get receiver's room id
     # if the user is already inside of a room 
     if room_id is not None:
         
@@ -122,13 +132,29 @@ def leave(username, room_id):
 
 # Below are new functions
 
-@socketio.on('get_public_key')
-def handle_get_public_key(username):
+@socketio.on('get_public_key_for_send')
+def handle_get_public_key_for_send(username):
     user = db.get_user(username)
     if user:
-        emit('public_key_response', {'public_key': user.pubKey})
+        emit('public_key_response_for_send', {'public_key': user.pubKey})
     else:
-        emit('public_key_response', {'error': 'User not found'})
+        emit('public_key_response_for_send', {'error': 'User not found'})
+
+@socketio.on('get_public_key_for_check')
+def handle_get_public_key_for_check(username):
+    user = db.get_user(username)
+    if user:
+        emit('public_key_response_for_check', {'public_key': user.pubKey})
+    else:
+        emit('public_key_response_for_check', {'error': 'User not found'})
+
+@socketio.on('get_public_key_for_save')
+def handle_get_public_key_for_save(username):
+    user = db.get_user(username)
+    if user:
+        emit('public_key_response_for_save', {'public_key': user.pubKey})
+    else:
+        emit('public_key_response_for_save', {'error': 'User not found'})
 
 @socketio.on('get_private_key')
 def handle_get_private_key(username):
