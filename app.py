@@ -55,6 +55,9 @@ def login_user():
     user = db.get_user(username)
     if user is None:
         return "Error: User does not exist!"
+    
+    print(f"(In login_user) The password get from user is {password}")
+    print(f"(In login_user) The password get from database is {user.password}")
 
     if user.password != password:
         return "Error: Password does not match!"
@@ -71,21 +74,23 @@ def signup():
 
 # handles a post request when the user clicks the signup button
 @app.route("/signup/user", methods=["POST"])
-def signup_user():
-    if not request.is_json:
-        abort(404)
-    username = request.json.get("username")
-    password = request.json.get("password")
-    public_key = request.json.get("publicKey")
-    private_key = request.json.get("privateKey")
-    
-    if username == "system":
-        return "Error: Invalid username!"
-    
-    if db.get_user(username) is None:
-        db.insert_user(username, password, public_key, private_key)
-        return url_for('home', username=username)
-    return "Error: User already exists!"
+def signup_user(): 
+    if not request.is_json: 
+        abort(404) 
+
+    username = request.json.get("username") 
+    password = request.json.get("password") 
+    public_key = request.json.get("publicKey") 
+    private_key = request.json.get("privateKey") 
+    salt = request.json.get("salt") 
+
+    if username == "system": 
+        return "Error: Invalid username!" 
+
+    if db.get_user(username) is None: 
+        db.insert_user(username, password, public_key, private_key, salt) 
+        return url_for('home', username=username) 
+    return "Error: User already exists!" 
 
 
 # handler when a "404" error happens

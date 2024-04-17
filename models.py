@@ -30,6 +30,7 @@ class User(Base):
     password: Mapped[str] = mapped_column(String)
     pubKey: Mapped[str] = mapped_column(String)
     priKey: Mapped[str] = mapped_column(String)
+    salt: Mapped[str] = mapped_column(String)
 
 class Friendship(Base):
     __tablename__ = "friendships"

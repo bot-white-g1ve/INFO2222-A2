@@ -189,3 +189,11 @@ def save_message_on_server(message, room_sender, room_receiver, sender, color):
             file.seek(0)
             json.dump(file_contents, file, indent=4)
             file.truncate() # delete original content
+
+@socketio.on('get_salt')
+def handle_get_salt(username):
+    user = db.get_user(username)
+    if user:
+        emit('salt_response', {'salt': user.salt})
+    else:
+        emit('salt_response', {'error': 'User not found'})

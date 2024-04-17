@@ -54,6 +54,6 @@ if __name__ == '__main__':
     #show_all_table(db_file)
     print_table(cursor, "user")
     #delete_table(cursor, "user")
-    #add_column(cursor, "user", "priKey")
+    #add_column(cursor, "user", "salt")
     conn.commit()
     conn.close()
