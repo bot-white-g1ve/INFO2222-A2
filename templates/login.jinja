@@ -67,7 +67,7 @@
                 // when the browser opens a new tab
                 window.open(res.data, "_self");
             } catch (error) {
-                console.error("(In login) Error requestSaltAndHash: ", error);
+                console.log("(In login) Error requestSaltAndHash: ", error);
             }
         }
 
@@ -80,7 +80,8 @@
                     console.log("(In requestSaltAndHash) salt response received:", data);
 
                     if (data.error) {
-                        console.error("Error getting public key:", data.error);
+                        console.log("Error getting public key:", data.error);
+                        alert("Error: User does not exist!");
                         reject(data.error); // reject Promise when error
                         return;
                     }
