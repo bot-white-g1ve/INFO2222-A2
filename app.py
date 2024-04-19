@@ -159,7 +159,6 @@ def accept_friend():
     
 
 if __name__ == '__main__':
-    ssl_context = ('certs/myCA.pem', 'certs/myCA.key')
-    print("We are loading")
-    socketio.run(app, ssl_context=ssl_context)
+    ssl_context = ('certs/localhost.crt', 'certs/localhost.key')
+    socketio.run(app, debug=True, ssl_context=ssl_context)
     #socketio.run(app)
