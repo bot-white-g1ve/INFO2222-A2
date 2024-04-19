@@ -26,7 +26,7 @@ app = Flask(__name__)
 
 # secret key used to sign the session cookie
 app.config['SECRET_KEY'] = secrets.token_hex()
-app.config['PREFERRED_URL_SCHEME'] = 'https'
+#app.config['PREFERRED_URL_SCHEME'] = 'https'
 socketio = SocketIO(app)
 
 # don't remove this!!
