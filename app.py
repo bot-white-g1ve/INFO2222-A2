@@ -26,6 +26,7 @@ app = Flask(__name__)
 
 # secret key used to sign the session cookie
 app.config['SECRET_KEY'] = secrets.token_hex()
+app.config['PREFERRED_URL_SCHEME'] = 'https'
 socketio = SocketIO(app)
 
 # don't remove this!!
@@ -158,4 +159,7 @@ def accept_friend():
     
 
 if __name__ == '__main__':
-    socketio.run(app)
+    ssl_context = ('certs/myCA.pem', 'certs/myCA.key')
+    print("We are loading")
+    socketio.run(app, ssl_context=ssl_context)
+    #socketio.run(app)
