@@ -48,6 +48,9 @@ def request_friend(user1, user2):
             session.add(friendship)
         if friendship.status == "rejected":
             friendship.status = "requested"
+        elif friendship.status == "accepted":
+            return False
+
         session.commit()
         return True
 
