@@ -1,3 +1,10 @@
+# HOW TO USE OUR APP
+Please refer to our report's first part "In the front".
+
+First, you need to add the certificate myCA.pem from the 'certs' folder to the macOS Keychain or Windows Certificate Manager to indicate that you trust my certificate; otherwise, the browser will warn that the webpage is not secure. 
+
+It is really complicated to add a certificate on Windows, so here we demonstrate using the macOS Keychain: press Command + Space to search for KeyChain, select on “system keychain”, click File -- Import Items, and select the myCA.pem from the certs folder to import. Then, double click the certificate you have imported, set to “always trust”. Next, use “python app.py” to start the server. You can see we have “https” as the prefix.
+
 # Chat Messaging Template
 This project contains the necessary scaffold in order to get your multi-million chat application idea started! The main technology driving this application is `socket.io` which allows two way communication between the client side and server side through so called "socket events". 
 

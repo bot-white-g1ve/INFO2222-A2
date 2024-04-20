@@ -66,7 +66,17 @@ def login_user():
     session['username'] = username
     session['logged_in'] = True
 
-    return url_for('home', username=request.json.get("username"))
+    token = secrets.token_urlsafe(32)
+
+    with open(f"tokens/{username}.token", "w") as f:
+        f.write(token)
+
+    ret = {
+        'token': token, 
+        'url': url_for('home', username=request.json.get("username"))
+    }
+
+    return ret
 
 # handles a get request to the signup page
 @app.route("/signup")

@@ -44,7 +44,10 @@ def disconnect():
 
 # send message event handler
 @socketio.on("send")
-def send(username, message, signature, room_id):
+def send(username, message, signature, room_id, token):
+    if not verify_token(username, token):
+        return "ERROR: Unmatched token!"
+
     if room_id is None:
         emit("incoming", ("system", "No room ID provided", "red", False))
         return
@@ -77,7 +80,10 @@ def send(username, message, signature, room_id):
 # join room event handler
 # sent when the user joins a room
 @socketio.on("join")
-def join(sender_name, receiver_name):
+def join(sender_name, receiver_name, token):
+
+    if not verify_token(sender_name, token):
+        return "ERROR: Unmatched token!"
     
     receiver = db.get_user(receiver_name)
     if receiver is None:
@@ -125,7 +131,10 @@ def join(sender_name, receiver_name):
 
 # leave room event handler
 @socketio.on("leave")
-def leave(username, room_id):
+def leave(username, room_id, token):
+    if not verify_token(username, token):
+        return "ERROR: Unmatched token!"
+
     emit("incoming", ("system", f"{username} has left the room.", "red", False), to=room_id)
     leave_room(room_id)
     room.leave_room(username)
@@ -133,7 +142,10 @@ def leave(username, room_id):
 # Below are new functions
 
 @socketio.on('get_public_key_for_send')
-def handle_get_public_key_for_send(username):
+def handle_get_public_key_for_send(username, who, token):
+    if not verify_token(who, token):
+        return "ERROR: Unmatched token!"
+
     user = db.get_user(username)
     if user:
         emit('public_key_response_for_send', {'public_key': user.pubKey})
@@ -141,7 +153,10 @@ def handle_get_public_key_for_send(username):
         emit('public_key_response_for_send', {'error': 'User not found'})
 
 @socketio.on('get_public_key_for_check')
-def handle_get_public_key_for_check(username):
+def handle_get_public_key_for_check(username, who ,token):
+    if not verify_token(who, token):
+        return "ERROR: Unmatched token!"
+
     user = db.get_user(username)
     if user:
         emit('public_key_response_for_check', {'public_key': user.pubKey})
@@ -149,7 +164,10 @@ def handle_get_public_key_for_check(username):
         emit('public_key_response_for_check', {'error': 'User not found'})
 
 @socketio.on('get_public_key_for_save')
-def handle_get_public_key_for_save(username):
+def handle_get_public_key_for_save(username, token):
+    if not verify_token(username, token):
+        return "ERROR: Unmatched token!"
+
     user = db.get_user(username)
     if user:
         emit('public_key_response_for_save', {'public_key': user.pubKey})
@@ -157,7 +175,10 @@ def handle_get_public_key_for_save(username):
         emit('public_key_response_for_save', {'error': 'User not found'})
 
 @socketio.on('get_private_key')
-def handle_get_private_key(username):
+def handle_get_private_key(username, who, token):
+    if not verify_token(who, token):
+        return "ERROR: Unmatched token!"
+
     user = db.get_user(username)
     if user:
         emit('private_key_response', {'private_key': user.priKey})
@@ -165,7 +186,10 @@ def handle_get_private_key(username):
         emit('private_key_response', {'error': 'User not found'})
 
 @socketio.on('save_message')
-def save_message_on_server(message, room_sender, room_receiver, sender, color):
+def save_message_on_server(message, room_sender, room_receiver, sender, color, token):
+    if not verify_token(room_sender, token):
+        return "ERROR: Unmatched token!"    
+
     # create the folder
     folder_path = 'messages'
     os.makedirs(folder_path, exist_ok=True)
@@ -197,3 +221,11 @@ def handle_get_salt(username):
         emit('salt_response', {'salt': user.salt})
     else:
         emit('salt_response', {'error': 'User not found'})
+
+def verify_token(username, token):
+    with open(f"tokens/{username}.token", 'r') as f:
+        token_saved = f.read()
+    if token != token_saved:
+        return False
+    else:
+        return True

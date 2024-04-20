@@ -114,6 +114,7 @@ def rejected_friend(user1, user2):
 
 def get_all_friends_of_current_user(username: str) -> list:
     with Session(engine) as session:
+        remove_duplicate_friendships()
         friends = []     
         for row in session.query(Friendship).filter(Friendship.user1==username).filter(Friendship.status == 'accepted'):
             friends.append(row.user2)
@@ -121,10 +122,30 @@ def get_all_friends_of_current_user(username: str) -> list:
     
 def get_all_request(username: str) -> list:
     with Session(engine) as session:
+        remove_duplicate_friendships()
         friends = []
         for row in session.query(Friendship).filter(Friendship.user2==username).filter(Friendship.status == 'requested'):
             friends.append(row.user1)
         return friends
+    
+def remove_duplicate_friendships():
+    with Session(engine) as session:
+        friendships = session.query(Friendship).order_by(Friendship.user1, Friendship.user2, Friendship.status).all()
+        
+        seen = set()
+        duplicates = []
+
+        for friendship in friendships:
+            key = (friendship.user1, friendship.user2, friendship.status)
+            if key in seen:
+                duplicates.append(friendship)
+            else:
+                seen.add(key)
+
+        for duplicate in duplicates:
+            session.delete(duplicate)
+        
+        session.commit()
 
 
 

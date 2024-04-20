@@ -108,6 +108,7 @@
 
 <script src="/static/js/libs/socket.io.min.js"></script>
 <script>
+    let token = Cookies.get('token');
     let room_id = 0;
     let receiver = '';
 
@@ -214,7 +215,7 @@
         console.log("(In join_room) join emitted with ", receiver);
         // pass in the receiver of our message to the server
         // as well as the current user's username
-        socket.emit("join", username, receiver, (res) => {
+        socket.emit("join", username, receiver, token, (res) => {
             // res is a string with the error message if the error occurs
             // this is a pretty bad way of doing error handling, but watevs
             if (typeof res != "number") {
@@ -241,7 +242,7 @@
     function leave() {
         Cookies.remove("room_id");
         //Cookies.remove("receiver");
-        socket.emit("leave", username, room_id);
+        socket.emit("leave", username, room_id, token);
         $("#input_box").hide();
         $("#chat_box").show();
     }
@@ -305,7 +306,7 @@
 
     function requestPublicKeyAndSend(username, receiver, message, room_id) {
         console.log("(In requestPublicKeyAndSend) get_public_key emitted with ", receiver)
-        socket.emit('get_public_key_for_send', receiver);
+        socket.emit('get_public_key_for_send', receiver, username, token);
 
         socket.once('public_key_response_for_send', function(data) {
             console.log("(In requestPublicKeyAndSend) Public key response received:", data); //d
@@ -344,7 +345,7 @@
             );
 
             const encryptedMessage = arrayBufferToBase64(encrypted);
-            socket.emit("send", username, encryptedMessage, sig, room_id);
+            socket.emit("send", username, encryptedMessage, sig, room_id, token);
         } catch (error) {
             console.error("Error during encryption or sending:", error);
         }
@@ -447,7 +448,7 @@
     function requestPublicKey_and_check_signature(message, signatureBase64, sender) {
         return new Promise((resolve, reject) => {
             console.log("(In requestPublicKey_and_check_signature) get_public_key emitted with ", {sender});
-            socket.emit('get_public_key_for_check', sender);
+            socket.emit('get_public_key_for_check', sender, username, token);
             socket.once('public_key_response_for_check', async function(data) {
                 if (data.error) {
                     console.error("Error getting public key:", data.error);
@@ -493,17 +494,17 @@
         });
     }
 
-    function getPrivateKey(username) {
+    function getPrivateKey(user) {
         return new Promise((resolve, reject) => {
             if (Cookies.get("privateKey")) {
                 let privateKey = Cookies.get("privateKey");
-                console.log("(getPrivateKey) get private key from cookie: ",{username, privateKey});
+                console.log("(getPrivateKey) get private key from cookie: ",{user, privateKey});
                 resolve(privateKey);
             } else {
-                socket.emit('get_private_key', username);
+                socket.emit('get_private_key', user, username, token);
 
                 socket.once('private_key_response', function(data) {
-                    console.log("(getPrivateKey) Private key response received:", {username, privateKey:data.private_key});
+                    console.log("(getPrivateKey) Private key response received:", {user, privateKey:data.private_key});
 
                     if (data.error) {
                         console.error("Error getting private key:", data.error);
@@ -514,7 +515,7 @@
                     let password = Cookies.get("password");
                     //console.log("(in get private key) get password: ", password);
 
-                    decryptPrivateKey(data.private_key, password, username).then(privateKey => {
+                    decryptPrivateKey(data.private_key, password, user).then(privateKey => {
                         //console.log("get private key: ", privateKey);
                         Cookies.set("privateKey", privateKey);
                         resolve(privateKey);
@@ -581,7 +582,7 @@
     function sendMessageForSave(sender, message, color){
         receiver = Cookies.get("receiver");
         console.log("(In sendMessageForSave) save_message emitted: ", {message, username, receiver, sender, color});
-        socket.emit('save_message', message, username, receiver, sender, color);
+        socket.emit('save_message', message, username, receiver, sender, color, token);
     }
 
     function requestOwnPublickeyAndSave(sender, message, color){
@@ -590,7 +591,7 @@
             console.log("(In requestOwnPublickeyAndEncrypt) Get public key from cookie: ", pubKey)
             encryptAndSave(sender, message, color, pubKey);
         } else {
-            socket.emit('get_public_key_for_save', username);
+            socket.emit('get_public_key_for_save', username, token);
 
             socket.once('public_key_response_for_save', function(data) {
                 console.log("(In requestOwnPublickeyAndEncryptForSave) Public key response received:", data); //d
